@@ -4,8 +4,8 @@
 name: jaran-lier-aing-ges
 
 on:
-  release:
-    types: [created]
+  push:
+    types: [published]
 
 jobs:
   build:

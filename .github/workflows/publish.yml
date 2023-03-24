@@ -1,31 +1,24 @@
-name: lierrr
-
+name: Test & Publish
 on:
-  release:
-    types: [published]
-
-permissions:
-  contents: read
-
+  push:
+    branches:
+      - master
 jobs:
-  deploy:
-
+  publish:
+    name: Install and publish
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python
-      uses: actions/setup-python@v3
-      with:
-        python-version: '3.x'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install build
-    - name: Build package
-      run: python -m build
-    - name: Publish package
-      uses: github.com/banca21/jaran-lier-aing-ges
-      with:
-        user: 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
-        password: ${{ secrets.PYPI_API_TOKEN }}
+      - uses: actions/checkout@v1
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
+      - uses: expo/expo-github-action@v5
+        with:
+          expo-version: 3.x
+          expo-username: ${{ secrets.EXPO_CLI_USERNAME }}
+          expo-password: ${{ secrets.EXPO_CLI_PASSWORD }}
+          expo-packager: npm
+      - run: npm ci
+      - run: npm test
+      - run: expo doctor
+      - run: expo publish

@@ -1,20 +1,57 @@
 name: "cacaca"
 
-on: push
-
+on:
+  push:
+    branches:
+      - main
+      - dev
+      - alpha
+name: "Build & Release"
 jobs:
-    publish:
-        runs-on: ubuntu-latest
-        steps:
-            - name: checkout
-              uses: actions/checkout@v2
-            - name: node
-              uses: actions/setup-node@v2
-              with:
-                  node-version: 12
-                  registry-url: https://registry.npmjs.org
-            - name: publish
-              run: npm publish
-              working-directory: my-package
-              env:
-                  NODE_AUTH_TOKEN: ${{secrets.NPM_AUTH_TOKEN}}
+  generate: #THIS JOB WORKS FINE
+    name: Generate codes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-java@v2
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '2.10.0'
+
+      - name: Installing graph dependencies
+        working-directory: ./packages/graph
+        run: flutter pub get
+
+      - name: Generating code
+        working-directory: ./packages/graph
+        run: flutter pub run build_runner build --delete-conflicting-outputs
+
+  build: #THIS JOB FAILS
+    needs: generate
+    name: Build appps
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dir: [ './apps/app1/','./apps/app2/' ]
+    permissions:
+      contents: write
+    steps:
+      - name: Installing dependencies in apps
+        working-directory: ${{ matrix.dir }}
+        run: flutter pub get
+
+      - name: Building apks
+        working-directory: ${{ matrix.dir }}
+        run: flutter build apk --debug lib/main_devnet.dart
+
+      - name: Push to Releases
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "${{ matrix.dir }}/build/app/outputs/apk/debug/*"
+          tag: v1.0.${{ github.run_number }}
+          token: ${{ secrets.GITHUB_TOKEN }}
